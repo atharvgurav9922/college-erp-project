@@ -51,34 +51,46 @@ export const FacultyManagement = () => {
     setIsViewModalOpen(true);
   };
 
-  const handleSaveAdd = (e) => {
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.employeeId || !formData.email) {
       addToast('Please fill in required fields', 'error');
       return;
     }
-    addFaculty({
-      ...formData,
-      assignedSubjects: [
-        { code: 'CS-GEN', name: 'Core Foundations', semester: '4th Sem', credits: 4 }
-      ]
-    });
-    setIsAddModalOpen(false);
-    addToast(`Added faculty member ${formData.name}!`, 'success');
+    try {
+      await addFaculty({
+        ...formData,
+        assignedSubjects: [
+          { code: 'CS-GEN', name: 'Core Foundations', semester: '4th Sem', credits: 4 }
+        ]
+      });
+      setIsAddModalOpen(false);
+      addToast(`Added faculty member ${formData.name}!`, 'success');
+    } catch (err) {
+      addToast(`Failed to add faculty: ${err.message}`, 'error');
+    }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!selectedFaculty) return;
-    updateFaculty(selectedFaculty.id, formData);
-    setIsEditModalOpen(false);
-    addToast(`Updated record for ${formData.name}`, 'success');
+    try {
+      await updateFaculty(selectedFaculty.id || selectedFaculty._id, formData);
+      setIsEditModalOpen(false);
+      addToast(`Updated record for ${formData.name}`, 'success');
+    } catch (err) {
+      addToast(`Failed to update faculty: ${err.message}`, 'error');
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedFaculty) return;
-    deleteFaculty(selectedFaculty.id);
-    addToast(`Faculty ${selectedFaculty.name} removed`, 'info');
+    try {
+      await deleteFaculty(selectedFaculty.id || selectedFaculty._id);
+      addToast(`Faculty ${selectedFaculty.name} removed`, 'info');
+    } catch (err) {
+      addToast(`Failed to delete faculty: ${err.message}`, 'error');
+    }
   };
 
   const columns = [

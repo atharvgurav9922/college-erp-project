@@ -58,38 +58,50 @@ export const HostelRooms = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveAdd = (e) => {
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
     if (!formData.roomNo) {
       addToast('Please enter room number', 'error');
       return;
     }
-    addHostelRoom({
-      ...formData,
-      floor: Number(formData.floor) || 1,
-      capacity: Number(formData.capacity) || 2
-    });
-    setIsAddModalOpen(false);
-    addToast(`Room ${formData.roomNo} added to inventory!`, 'success');
+    try {
+      await addHostelRoom({
+        ...formData,
+        floor: Number(formData.floor) || 1,
+        capacity: Number(formData.capacity) || 2
+      });
+      setIsAddModalOpen(false);
+      addToast(`Room ${formData.roomNo} added to inventory!`, 'success');
+    } catch (err) {
+      addToast(`Failed to add room: ${err.message}`, 'error');
+    }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!selectedRoom) return;
-    updateHostelRoom(selectedRoom.id, {
-      ...formData,
-      floor: Number(formData.floor),
-      capacity: Number(formData.capacity),
-      occupied: Number(formData.occupied)
-    });
-    setIsEditModalOpen(false);
-    addToast(`Room ${formData.roomNo} updated successfully`, 'success');
+    try {
+      await updateHostelRoom(selectedRoom.id || selectedRoom._id, {
+        ...formData,
+        floor: Number(formData.floor),
+        capacity: Number(formData.capacity),
+        occupied: Number(formData.occupied)
+      });
+      setIsEditModalOpen(false);
+      addToast(`Room ${formData.roomNo} updated successfully`, 'success');
+    } catch (err) {
+      addToast(`Failed to update room: ${err.message}`, 'error');
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedRoom) return;
-    deleteHostelRoom(selectedRoom.id);
-    addToast(`Room ${selectedRoom.roomNo} removed from hostel registry`, 'info');
+    try {
+      await deleteHostelRoom(selectedRoom.id || selectedRoom._id);
+      addToast(`Room ${selectedRoom.roomNo} removed from hostel registry`, 'info');
+    } catch (err) {
+      addToast(`Failed to delete room: ${err.message}`, 'error');
+    }
   };
 
   return (

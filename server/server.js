@@ -10,30 +10,29 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Load generated URI from parts or use raw URI
+// Construct MongoDB URI securely if template is used
 let mongoUri = process.env.MONGODB_URI;
 if (mongoUri && mongoUri.includes('${')) {
-  // Simple variable replacement for Atlas if users stick to template
+  const user = encodeURIComponent(process.env.MONGO_USERNAME || '');
+  const pass = encodeURIComponent(process.env.MONGO_PASSWORD || '');
+  const cluster = process.env.MONGO_CLUSTER || '';
   mongoUri = mongoUri
-    .replace('${MONGO_USERNAME}', process.env.MONGO_USERNAME)
-    .replace('${MONGO_PASSWORD}', process.env.MONGO_PASSWORD)
-    .replace('${MONGO_CLUSTER}', process.env.MONGO_CLUSTER);
+    .replace('${MONGO_USERNAME}', user)
+    .replace('${MONGO_PASSWORD}', pass)
+    .replace('${MONGO_CLUSTER}', cluster);
 }
 
-// Connect to MongoDB
-const connectDB = async () => {
-  try {
-    if (!mongoUri) throw new Error("MONGODB_URI is not defined in .env");
-    
-    await mongoose.connect(mongoUri);
-    console.log('✅ Connected to MongoDB Atlas successfully');
-  } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
-    process.exit(1);
-  }
-};
-
-connectDB();
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
+  const dbState = mongoose.connection.readyState;
+  res.json({
+    status: 'ok',
+    database: states[dbState] || 'Unknown',
+    databaseConnected: dbState === 1,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // API Routes
 const apiRoutes = require('./routes/api');
@@ -41,10 +40,36 @@ app.use('/api', apiRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled Server Error:', err.stack);
-  res.status(500).json({ error: 'Something went wrong!', details: err.message });
+  console.error('Unhandled Server Error:', err);
+  res.status(500).json({ error: 'Internal Server Error', details: err.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-});
+// Connect to MongoDB
+const startServer = async () => {
+  try {
+    if (!mongoUri) {
+      throw new Error("MONGODB_URI is not defined in environment variables or .env");
+    }
+    
+    console.log('Connecting to MongoDB Atlas...');
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 10000
+    });
+    console.log('✅ Connected to MongoDB Atlas successfully');
+
+    app.listen(PORT, () => {
+      console.log(`🚀 College ERP Backend running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error.message);
+    console.error('Please verify your MONGODB_URI in server/.env or environment variables.');
+    // Keep app running so health check can report the DB issue
+    app.listen(PORT, () => {
+      console.log(`⚠️ Server running in degraded mode on http://localhost:${PORT} (MongoDB not connected)`);
+    });
+  }
+};
+
+startServer();
+
+module.exports = app;

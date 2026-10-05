@@ -12,11 +12,15 @@ export const StudentProfile = () => {
   const [address, setAddress] = useState(currentUser?.address || '452 Elm Street, Maplewood, NJ');
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    updateCurrentUser({ phone, address });
-    setIsEditing(false);
-    addToast('Profile contact information updated successfully!', 'success');
+    try {
+      await updateCurrentUser({ phone, address });
+      setIsEditing(false);
+      addToast('Profile contact information updated successfully in database!', 'success');
+    } catch (err) {
+      addToast(`Failed to update profile: ${err.message}`, 'error');
+    }
   };
 
   return (

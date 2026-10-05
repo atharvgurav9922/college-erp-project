@@ -42,38 +42,50 @@ export const DepartmentsManagement = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveAdd = (e) => {
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.code || !formData.hod) {
       addToast('Please enter Department Name, Code, and HOD', 'error');
       return;
     }
-    addDepartment({
-      ...formData,
-      facultyCount: Number(formData.facultyCount) || 12,
-      studentCount: Number(formData.studentCount) || 180,
-      established: Number(formData.established) || 2020
-    });
-    setIsAddModalOpen(false);
-    addToast(`Department ${formData.name} established!`, 'success');
+    try {
+      await addDepartment({
+        ...formData,
+        facultyCount: Number(formData.facultyCount) || 12,
+        studentCount: Number(formData.studentCount) || 180,
+        established: Number(formData.established) || 2020
+      });
+      setIsAddModalOpen(false);
+      addToast(`Department ${formData.name} established!`, 'success');
+    } catch (err) {
+      addToast(`Failed to add department: ${err.message}`, 'error');
+    }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!selectedDept) return;
-    updateDepartment(selectedDept.id, {
-      ...formData,
-      facultyCount: Number(formData.facultyCount),
-      studentCount: Number(formData.studentCount)
-    });
-    setIsEditModalOpen(false);
-    addToast(`Updated ${formData.name} department info`, 'success');
+    try {
+      await updateDepartment(selectedDept.id || selectedDept._id, {
+        ...formData,
+        facultyCount: Number(formData.facultyCount),
+        studentCount: Number(formData.studentCount)
+      });
+      setIsEditModalOpen(false);
+      addToast(`Updated ${formData.name} department info`, 'success');
+    } catch (err) {
+      addToast(`Failed to update department: ${err.message}`, 'error');
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedDept) return;
-    deleteDepartment(selectedDept.id);
-    addToast(`Department ${selectedDept.name} deleted`, 'info');
+    try {
+      await deleteDepartment(selectedDept.id || selectedDept._id);
+      addToast(`Department ${selectedDept.name} deleted`, 'info');
+    } catch (err) {
+      addToast(`Failed to delete department: ${err.message}`, 'error');
+    }
   };
 
   return (

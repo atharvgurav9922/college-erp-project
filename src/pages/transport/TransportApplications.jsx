@@ -30,27 +30,35 @@ export const TransportApplications = () => {
     setIsRejectModalOpen(true);
   };
 
-  const handleConfirmApproval = (e) => {
+  const handleConfirmApproval = async (e) => {
     e.preventDefault();
     if (!selectedApp || !assignedBusNo) return;
 
-    approveTransportApplication(selectedApp.id, assignedBusNo, assignedStop);
-    setIsApproveModalOpen(false);
-
     try {
-      confetti({ particleCount: 50, spread: 60 });
-    } catch (e) {}
+      await approveTransportApplication(selectedApp.id || selectedApp._id, assignedBusNo, assignedStop);
+      setIsApproveModalOpen(false);
 
-    addToast(`Bus pass approved for ${selectedApp.studentName}. Allocated ${assignedBusNo}!`, 'success');
+      try {
+        confetti({ particleCount: 50, spread: 60 });
+      } catch (e) {}
+
+      addToast(`Bus pass approved for ${selectedApp.studentName}. Allocated ${assignedBusNo}!`, 'success');
+    } catch (err) {
+      addToast(`Failed to approve transport pass: ${err.message}`, 'error');
+    }
   };
 
-  const handleConfirmRejection = (e) => {
+  const handleConfirmRejection = async (e) => {
     e.preventDefault();
     if (!selectedApp) return;
 
-    rejectTransportApplication(selectedApp.id, rejectionReason);
-    setIsRejectModalOpen(false);
-    addToast(`Declined bus pass request for ${selectedApp.studentName}`, 'info');
+    try {
+      await rejectTransportApplication(selectedApp.id || selectedApp._id, rejectionReason);
+      setIsRejectModalOpen(false);
+      addToast(`Declined bus pass request for ${selectedApp.studentName}`, 'info');
+    } catch (err) {
+      addToast(`Failed to reject transport pass: ${err.message}`, 'error');
+    }
   };
 
   const columns = [

@@ -9,7 +9,29 @@ const userSchema = new mongoose.Schema({
   role: { type: String, required: true, enum: ['admin', 'faculty', 'student', 'warden', 'transport'] },
   avatar: { type: String },
   phone: { type: String },
-  department: { type: String }
+  department: { type: String },
+  rollNumber: { type: String },
+  designation: { type: String },
+  employeeId: { type: String },
+  batch: { type: String },
+  cgpa: { type: Number },
+  bloodGroup: { type: String },
+  mentor: { type: String },
+  address: { type: String },
+  hostelStatus: { type: String },
+  hostelDetails: {
+    block: String,
+    roomNo: String,
+    roomType: String,
+    bedNo: String
+  },
+  transportStatus: { type: String },
+  transportDetails: {
+    busNo: String,
+    route: String,
+    stop: String,
+    passNumber: String
+  }
 }, { timestamps: true });
 
 // --- Department ---
@@ -18,8 +40,8 @@ const departmentSchema = new mongoose.Schema({
   name: { type: String, required: true },
   code: { type: String, required: true },
   hod: { type: String },
-  facultyCount: { type: Number },
-  studentCount: { type: Number },
+  facultyCount: { type: Number, default: 0 },
+  studentCount: { type: Number, default: 0 },
   established: { type: Number },
   description: { type: String }
 }, { timestamps: true });
@@ -35,15 +57,27 @@ const studentSchema = new mongoose.Schema({
   department: { type: String },
   semester: { type: String },
   batch: { type: String },
-  cgpa: { type: Number },
+  cgpa: { type: Number, default: 3.5 },
   gender: { type: String },
   bloodGroup: { type: String },
   mentor: { type: String },
-  hostelStatus: { type: String },
-  hostelRoom: { type: String },
-  transportStatus: { type: String },
-  transportBus: { type: String },
-  status: { type: String }
+  hostelStatus: { type: String, default: 'None' },
+  hostelRoom: { type: String, default: null },
+  hostelDetails: {
+    block: String,
+    roomNo: String,
+    roomType: String,
+    bedNo: String
+  },
+  transportStatus: { type: String, default: 'None' },
+  transportBus: { type: String, default: null },
+  transportDetails: {
+    busNo: String,
+    route: String,
+    stop: String,
+    passNumber: String
+  },
+  status: { type: String, default: 'Active' }
 }, { timestamps: true });
 
 // --- Faculty ---
@@ -57,7 +91,7 @@ const facultySchema = new mongoose.Schema({
   designation: { type: String },
   qualification: { type: String },
   experience: { type: String },
-  status: { type: String },
+  status: { type: String, default: 'Active' },
   assignedSubjects: [{
     code: String,
     name: String,
@@ -70,8 +104,8 @@ const facultySchema = new mongoose.Schema({
 const noticeSchema = new mongoose.Schema({
   id: { type: String, unique: true },
   title: { type: String, required: true },
-  category: { type: String },
-  target: { type: String },
+  category: { type: String, default: 'Academics' },
+  target: { type: String, default: 'All Students' },
   date: { type: String },
   author: { type: String },
   pinned: { type: Boolean, default: false },
@@ -81,13 +115,13 @@ const noticeSchema = new mongoose.Schema({
 // --- Attendance ---
 const attendanceSchema = new mongoose.Schema({
   studentId: { type: String },
-  subjectCode: { type: String },
+  subjectCode: { type: String, required: true },
   subjectName: { type: String },
   faculty: { type: String },
-  totalClasses: { type: Number },
-  attendedClasses: { type: Number },
-  percentage: { type: Number },
-  status: { type: String },
+  totalClasses: { type: Number, default: 0 },
+  attendedClasses: { type: Number, default: 0 },
+  percentage: { type: Number, default: 100 },
+  status: { type: String, default: 'Good' },
   recentLogs: [{
     date: String,
     status: String
@@ -97,29 +131,29 @@ const attendanceSchema = new mongoose.Schema({
 // --- Marks ---
 const marksSchema = new mongoose.Schema({
   studentId: { type: String },
-  subjectCode: { type: String },
+  subjectCode: { type: String, required: true },
   subjectName: { type: String },
-  credits: { type: Number },
-  internal1: { type: Number },
-  internal2: { type: Number },
-  assignment: { type: Number },
-  finalExam: { type: Number },
-  totalScore: { type: Number },
-  grade: { type: String },
-  gradePoint: { type: Number }
+  credits: { type: Number, default: 4 },
+  internal1: { type: Number, default: 0 },
+  internal2: { type: Number, default: 0 },
+  assignment: { type: Number, default: 0 },
+  finalExam: { type: Number, default: 0 },
+  totalScore: { type: Number, default: 0 },
+  grade: { type: String, default: 'B' },
+  gradePoint: { type: Number, default: 7 }
 }, { timestamps: true });
 
 // --- Hostel Room ---
 const roomSchema = new mongoose.Schema({
   id: { type: String, unique: true },
-  roomNo: { type: String },
+  roomNo: { type: String, required: true },
   block: { type: String },
   floor: { type: Number },
   type: { type: String },
-  capacity: { type: Number },
-  occupied: { type: Number },
-  status: { type: String },
-  residents: [String] // Array of student IDs
+  capacity: { type: Number, default: 2 },
+  occupied: { type: Number, default: 0 },
+  status: { type: String, default: 'Available' },
+  residents: [String]
 }, { timestamps: true });
 
 // --- Hostel Application ---
@@ -134,8 +168,9 @@ const hostelApplicationSchema = new mongoose.Schema({
   preferredBlock: { type: String },
   reason: { type: String },
   appliedDate: { type: String },
-  status: { type: String },
-  assignedRoom: { type: String }
+  status: { type: String, default: 'Pending' },
+  assignedRoom: { type: String },
+  rejectionReason: { type: String }
 }, { timestamps: true });
 
 // --- Complaint ---
@@ -145,33 +180,33 @@ const complaintSchema = new mongoose.Schema({
   rollNumber: { type: String },
   roomNo: { type: String },
   category: { type: String },
-  title: { type: String },
+  title: { type: String, required: true },
   description: { type: String },
   submittedDate: { type: String },
-  priority: { type: String },
-  status: { type: String }
+  priority: { type: String, default: 'Medium' },
+  status: { type: String, default: 'Open' }
 }, { timestamps: true });
 
 // --- Bus ---
 const busSchema = new mongoose.Schema({
   id: { type: String, unique: true },
-  busNo: { type: String },
+  busNo: { type: String, required: true },
   regNumber: { type: String },
-  capacity: { type: Number },
-  occupiedSeats: { type: Number },
+  capacity: { type: Number, default: 40 },
+  occupiedSeats: { type: Number, default: 0 },
   driverName: { type: String },
   driverPhone: { type: String },
   assignedRoute: { type: String },
-  status: { type: String },
+  status: { type: String, default: 'Active' },
   model: { type: String },
-  fuelStatus: { type: String }
+  fuelStatus: { type: String, default: '100%' }
 }, { timestamps: true });
 
 // --- Route ---
 const routeSchema = new mongoose.Schema({
   id: { type: String, unique: true },
-  routeNumber: { type: String },
-  name: { type: String },
+  routeNumber: { type: String, required: true },
+  name: { type: String, required: true },
   assignedBus: { type: String },
   startPoint: { type: String },
   endPoint: { type: String },
@@ -195,9 +230,21 @@ const transportApplicationSchema = new mongoose.Schema({
   preferredStop: { type: String },
   appliedDate: { type: String },
   reason: { type: String },
-  status: { type: String },
+  status: { type: String, default: 'Pending' },
   assignedBus: { type: String },
-  assignedStop: { type: String }
+  assignedStop: { type: String },
+  rejectionReason: { type: String }
+}, { timestamps: true });
+
+// --- Timetable ---
+const timetableSchema = new mongoose.Schema({
+  day: { type: String, required: true, unique: true },
+  slots: [{
+    time: String,
+    subject: String,
+    room: String,
+    faculty: String
+  }]
 }, { timestamps: true });
 
 module.exports = {
@@ -214,4 +261,5 @@ module.exports = {
   Bus: mongoose.model('Bus', busSchema),
   Route: mongoose.model('Route', routeSchema),
   TransportApplication: mongoose.model('TransportApplication', transportApplicationSchema),
+  Timetable: mongoose.model('Timetable', timetableSchema)
 };

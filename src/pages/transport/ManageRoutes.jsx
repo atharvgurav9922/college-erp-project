@@ -51,29 +51,41 @@ export const ManageRoutes = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveAdd = (e) => {
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.startPoint) {
       addToast('Please enter route name and starting terminal', 'error');
       return;
     }
-    addRoute(formData);
-    setIsAddModalOpen(false);
-    addToast(`${formData.routeNumber}: ${formData.name} added!`, 'success');
+    try {
+      await addRoute(formData);
+      setIsAddModalOpen(false);
+      addToast(`${formData.routeNumber}: ${formData.name} added!`, 'success');
+    } catch (err) {
+      addToast(`Failed to add route: ${err.message}`, 'error');
+    }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!selectedRoute) return;
-    updateRoute(selectedRoute.id, formData);
-    setIsEditModalOpen(false);
-    addToast(`Updated ${formData.routeNumber}`, 'success');
+    try {
+      await updateRoute(selectedRoute.id || selectedRoute._id, formData);
+      setIsEditModalOpen(false);
+      addToast(`Updated ${formData.routeNumber}`, 'success');
+    } catch (err) {
+      addToast(`Failed to update route: ${err.message}`, 'error');
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedRoute) return;
-    deleteRoute(selectedRoute.id);
-    addToast(`Route ${selectedRoute.routeNumber} removed`, 'info');
+    try {
+      await deleteRoute(selectedRoute.id || selectedRoute._id);
+      addToast(`Route ${selectedRoute.routeNumber} removed`, 'info');
+    } catch (err) {
+      addToast(`Failed to delete route: ${err.message}`, 'error');
+    }
   };
 
   return (

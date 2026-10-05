@@ -56,35 +56,47 @@ export const StudentsManagement = () => {
     setIsViewModalOpen(true);
   };
 
-  const handleSaveAdd = (e) => {
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.rollNumber || !formData.email) {
       addToast('Please fill in required fields (Name, Roll Number, Email)', 'error');
       return;
     }
-    addStudent({
-      ...formData,
-      cgpa: Number(formData.cgpa) || 3.5
-    });
-    setIsAddModalOpen(false);
-    addToast(`Successfully enrolled student ${formData.name}!`, 'success');
+    try {
+      await addStudent({
+        ...formData,
+        cgpa: Number(formData.cgpa) || 3.5
+      });
+      setIsAddModalOpen(false);
+      addToast(`Successfully enrolled student ${formData.name}!`, 'success');
+    } catch (err) {
+      addToast(`Failed to save student: ${err.message}`, 'error');
+    }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!selectedStudent) return;
-    updateStudent(selectedStudent.id, {
-      ...formData,
-      cgpa: Number(formData.cgpa)
-    });
-    setIsEditModalOpen(false);
-    addToast(`Updated record for ${formData.name}`, 'success');
+    try {
+      await updateStudent(selectedStudent.id || selectedStudent._id, {
+        ...formData,
+        cgpa: Number(formData.cgpa)
+      });
+      setIsEditModalOpen(false);
+      addToast(`Updated record for ${formData.name}`, 'success');
+    } catch (err) {
+      addToast(`Failed to update student: ${err.message}`, 'error');
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedStudent) return;
-    deleteStudent(selectedStudent.id);
-    addToast(`Student ${selectedStudent.name} deleted from records`, 'info');
+    try {
+      await deleteStudent(selectedStudent.id || selectedStudent._id);
+      addToast(`Student ${selectedStudent.name} deleted from records`, 'info');
+    } catch (err) {
+      addToast(`Failed to delete student: ${err.message}`, 'error');
+    }
   };
 
   // Columns definition
@@ -141,8 +153,8 @@ export const StudentsManagement = () => {
             row.hostelStatus === 'Allocated'
               ? 'success'
               : row.hostelStatus === 'Applied'
-              ? 'warning'
-              : 'default'
+                ? 'warning'
+                : 'default'
           }
         >
           {row.hostelStatus === 'Allocated' ? row.hostelRoom || 'Allocated' : row.hostelStatus}
@@ -158,8 +170,8 @@ export const StudentsManagement = () => {
             row.transportStatus === 'Allocated'
               ? 'info'
               : row.transportStatus === 'Applied'
-              ? 'warning'
-              : 'default'
+                ? 'warning'
+                : 'default'
           }
         >
           {row.transportStatus === 'Allocated' ? row.transportBus || 'Bus' : row.transportStatus}
@@ -347,13 +359,13 @@ export const StudentsManagement = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                CGPA (0 - 4.0)
+                CGPA (0 - 10.0)
               </label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
-                max="4.0"
+                max="10.0"
                 value={formData.cgpa}
                 onChange={(e) => setFormData({ ...formData, cgpa: e.target.value })}
                 className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"

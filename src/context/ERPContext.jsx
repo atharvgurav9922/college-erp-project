@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { api } from '../services/api';
 import {
   INITIAL_STUDENTS,
   INITIAL_FACULTY,
@@ -41,8 +42,10 @@ export const ERPProvider = ({ children }) => {
   const [buses, setBuses] = useState(() => loadStorage('buses', INITIAL_BUSES));
   const [routes, setRoutes] = useState(() => loadStorage('routes', INITIAL_ROUTES));
   const [transportApplications, setTransportApplications] = useState(() => loadStorage('transport_apps', INITIAL_TRANSPORT_APPLICATIONS));
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDbConnected, setIsDbConnected] = useState(false);
 
-  // Sync to localStorage
+  // Sync to local fallback storage whenever state updates
   useEffect(() => { localStorage.setItem('erp_students', JSON.stringify(students)); }, [students]);
   useEffect(() => { localStorage.setItem('erp_faculty', JSON.stringify(faculty)); }, [faculty]);
   useEffect(() => { localStorage.setItem('erp_departments', JSON.stringify(departments)); }, [departments]);
@@ -56,6 +59,94 @@ export const ERPProvider = ({ children }) => {
   useEffect(() => { localStorage.setItem('erp_buses', JSON.stringify(buses)); }, [buses]);
   useEffect(() => { localStorage.setItem('erp_routes', JSON.stringify(routes)); }, [routes]);
   useEffect(() => { localStorage.setItem('erp_transport_apps', JSON.stringify(transportApplications)); }, [transportApplications]);
+
+  // Load latest data from MongoDB Atlas on mount or refresh
+  const fetchAllData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const results = await Promise.allSettled([
+        api.getStudents(),
+        api.getFaculty(),
+        api.getDepartments(),
+        api.getNotices(),
+        api.getAttendance(),
+        api.getMarks(),
+        api.getTimetable(),
+        api.getHostelRooms(),
+        api.getHostelApplications(),
+        api.getHostelComplaints(),
+        api.getBuses(),
+        api.getRoutes(),
+        api.getTransportApplications()
+      ]);
+
+      let anySuccess = false;
+
+      if (results[0].status === 'fulfilled' && Array.isArray(results[0].value) && results[0].value.length > 0) {
+        setStudents(results[0].value);
+        anySuccess = true;
+      }
+      if (results[1].status === 'fulfilled' && Array.isArray(results[1].value) && results[1].value.length > 0) {
+        setFaculty(results[1].value);
+        anySuccess = true;
+      }
+      if (results[2].status === 'fulfilled' && Array.isArray(results[2].value) && results[2].value.length > 0) {
+        setDepartments(results[2].value);
+        anySuccess = true;
+      }
+      if (results[3].status === 'fulfilled' && Array.isArray(results[3].value) && results[3].value.length > 0) {
+        setNotices(results[3].value);
+        anySuccess = true;
+      }
+      if (results[4].status === 'fulfilled' && Array.isArray(results[4].value) && results[4].value.length > 0) {
+        setStudentAttendance(results[4].value);
+        anySuccess = true;
+      }
+      if (results[5].status === 'fulfilled' && Array.isArray(results[5].value) && results[5].value.length > 0) {
+        setStudentMarks(results[5].value);
+        anySuccess = true;
+      }
+      if (results[6].status === 'fulfilled' && results[6].value && typeof results[6].value === 'object' && Object.keys(results[6].value).length > 0) {
+        setTimetable(results[6].value);
+        anySuccess = true;
+      }
+      if (results[7].status === 'fulfilled' && Array.isArray(results[7].value) && results[7].value.length > 0) {
+        setHostelRooms(results[7].value);
+        anySuccess = true;
+      }
+      if (results[8].status === 'fulfilled' && Array.isArray(results[8].value) && results[8].value.length > 0) {
+        setHostelApplications(results[8].value);
+        anySuccess = true;
+      }
+      if (results[9].status === 'fulfilled' && Array.isArray(results[9].value) && results[9].value.length > 0) {
+        setHostelComplaints(results[9].value);
+        anySuccess = true;
+      }
+      if (results[10].status === 'fulfilled' && Array.isArray(results[10].value) && results[10].value.length > 0) {
+        setBuses(results[10].value);
+        anySuccess = true;
+      }
+      if (results[11].status === 'fulfilled' && Array.isArray(results[11].value) && results[11].value.length > 0) {
+        setRoutes(results[11].value);
+        anySuccess = true;
+      }
+      if (results[12].status === 'fulfilled' && Array.isArray(results[12].value) && results[12].value.length > 0) {
+        setTransportApplications(results[12].value);
+        anySuccess = true;
+      }
+
+      setIsDbConnected(anySuccess);
+    } catch (error) {
+      console.warn('Backend fetch note: using local cache while server starts up', error);
+      setIsDbConnected(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   // Reset to default seed
   const resetToMockData = () => {
@@ -75,8 +166,8 @@ export const ERPProvider = ({ children }) => {
   };
 
   // --- Student Actions ---
-  const addStudent = (studentData) => {
-    const newStudent = {
+  const addStudent = async (studentData) => {
+    const payload = {
       ...studentData,
       id: `STU-${Date.now().toString().slice(-4)}`,
       hostelStatus: studentData.hostelStatus || 'None',
@@ -85,305 +176,499 @@ export const ERPProvider = ({ children }) => {
       transportBus: studentData.transportBus || null,
       status: 'Active'
     };
-    setStudents((prev) => [newStudent, ...prev]);
-    return newStudent;
+
+    try {
+      const saved = await api.createStudent(payload);
+      const studentToAdd = saved || payload;
+      setStudents((prev) => [studentToAdd, ...prev]);
+      return studentToAdd;
+    } catch (error) {
+      console.error('Error adding student to MongoDB:', error);
+      throw error;
+    }
   };
 
-  const updateStudent = (id, updates) => {
-    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+  const updateStudent = async (id, updates) => {
+    try {
+      const updated = await api.updateStudent(id, updates);
+      setStudents((prev) => prev.map((s) => ((s.id === id || s._id === id) ? { ...s, ...(updated || updates) } : s)));
+      return updated;
+    } catch (error) {
+      console.error('Error updating student in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const deleteStudent = (id) => {
-    setStudents((prev) => prev.filter((s) => s.id !== id));
+  const deleteStudent = async (id) => {
+    try {
+      await api.deleteStudent(id);
+      setStudents((prev) => prev.filter((s) => s.id !== id && s._id !== id));
+    } catch (error) {
+      console.error('Error deleting student from MongoDB:', error);
+      throw error;
+    }
   };
 
   // --- Faculty Actions ---
-  const addFaculty = (facultyData) => {
-    const newFaculty = {
+  const addFaculty = async (facultyData) => {
+    const payload = {
       ...facultyData,
       id: `FAC-${Date.now().toString().slice(-4)}`,
       status: 'Active',
       assignedSubjects: facultyData.assignedSubjects || []
     };
-    setFaculty((prev) => [newFaculty, ...prev]);
-    return newFaculty;
+
+    try {
+      const saved = await api.createFaculty(payload);
+      const facultyToAdd = saved || payload;
+      setFaculty((prev) => [facultyToAdd, ...prev]);
+      return facultyToAdd;
+    } catch (error) {
+      console.error('Error adding faculty to MongoDB:', error);
+      throw error;
+    }
   };
 
-  const updateFaculty = (id, updates) => {
-    setFaculty((prev) => prev.map((f) => (f.id === id ? { ...f, ...updates } : f)));
+  const updateFaculty = async (id, updates) => {
+    try {
+      const updated = await api.updateFaculty(id, updates);
+      setFaculty((prev) => prev.map((f) => ((f.id === id || f._id === id) ? { ...f, ...(updated || updates) } : f)));
+      return updated;
+    } catch (error) {
+      console.error('Error updating faculty in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const deleteFaculty = (id) => {
-    setFaculty((prev) => prev.filter((f) => f.id !== id));
+  const deleteFaculty = async (id) => {
+    try {
+      await api.deleteFaculty(id);
+      setFaculty((prev) => prev.filter((f) => f.id !== id && f._id !== id));
+    } catch (error) {
+      console.error('Error deleting faculty from MongoDB:', error);
+      throw error;
+    }
   };
 
   // --- Department Actions ---
-  const addDepartment = (deptData) => {
-    const newDept = {
+  const addDepartment = async (deptData) => {
+    const payload = {
       ...deptData,
-      id: `DEP-${deptData.code.toUpperCase()}`
+      id: `DEP-${(deptData.code || 'GEN').toUpperCase()}`
     };
-    setDepartments((prev) => [...prev, newDept]);
+
+    try {
+      const saved = await api.createDepartment(payload);
+      const deptToAdd = saved || payload;
+      setDepartments((prev) => [...prev, deptToAdd]);
+      return deptToAdd;
+    } catch (error) {
+      console.error('Error adding department to MongoDB:', error);
+      throw error;
+    }
   };
 
-  const updateDepartment = (id, updates) => {
-    setDepartments((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
+  const updateDepartment = async (id, updates) => {
+    try {
+      const updated = await api.updateDepartment(id, updates);
+      setDepartments((prev) => prev.map((d) => ((d.id === id || d._id === id) ? { ...d, ...(updated || updates) } : d)));
+      return updated;
+    } catch (error) {
+      console.error('Error updating department in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const deleteDepartment = (id) => {
-    setDepartments((prev) => prev.filter((d) => d.id !== id));
+  const deleteDepartment = async (id) => {
+    try {
+      await api.deleteDepartment(id);
+      setDepartments((prev) => prev.filter((d) => d.id !== id && d._id !== id));
+    } catch (error) {
+      console.error('Error deleting department from MongoDB:', error);
+      throw error;
+    }
   };
 
   // --- Notice Actions ---
-  const addNotice = (noticeData) => {
-    const newNotice = {
+  const addNotice = async (noticeData) => {
+    const payload = {
       ...noticeData,
       id: `NOT-${Date.now().toString().slice(-4)}`,
       date: new Date().toISOString().split('T')[0]
     };
-    setNotices((prev) => [newNotice, ...prev]);
-    return newNotice;
+
+    try {
+      const saved = await api.createNotice(payload);
+      const noticeToAdd = saved || payload;
+      setNotices((prev) => [noticeToAdd, ...prev]);
+      return noticeToAdd;
+    } catch (error) {
+      console.error('Error adding notice to MongoDB:', error);
+      throw error;
+    }
   };
 
-  const updateNotice = (id, updates) => {
-    setNotices((prev) => prev.map((n) => (n.id === id ? { ...n, ...updates } : n)));
+  const updateNotice = async (id, updates) => {
+    try {
+      const updated = await api.updateNotice(id, updates);
+      setNotices((prev) => prev.map((n) => ((n.id === id || n._id === id) ? { ...n, ...(updated || updates) } : n)));
+      return updated;
+    } catch (error) {
+      console.error('Error updating notice in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const deleteNotice = (id) => {
-    setNotices((prev) => prev.filter((n) => n.id !== id));
+  const deleteNotice = async (id) => {
+    try {
+      await api.deleteNotice(id);
+      setNotices((prev) => prev.filter((n) => n.id !== id && n._id !== id));
+    } catch (error) {
+      console.error('Error deleting notice from MongoDB:', error);
+      throw error;
+    }
   };
 
   // --- Attendance Actions ---
-  const submitAttendanceBatch = ({ subjectCode, date, attendanceMap }) => {
-    // Update student subject summary
-    setStudentAttendance((prev) =>
-      prev.map((item) => {
-        if (item.subjectCode === subjectCode) {
-          const isPresent = attendanceMap['STU-001'] !== 'Absent';
-          const newTotal = item.totalClasses + 1;
-          const newAttended = isPresent ? item.attendedClasses + 1 : item.attendedClasses;
-          const newLogs = [{ date, status: isPresent ? 'Present' : 'Absent' }, ...item.recentLogs];
-          return {
-            ...item,
-            totalClasses: newTotal,
-            attendedClasses: newAttended,
-            percentage: Number(((newAttended / newTotal) * 100).toFixed(1)),
-            recentLogs: newLogs.slice(0, 10)
-          };
+  const submitAttendanceBatch = async ({ subjectCode, date, attendanceMap }) => {
+    try {
+      const updated = await api.submitAttendanceBatch({ subjectCode, date, attendanceMap });
+      setStudentAttendance((prev) => {
+        const index = prev.findIndex((item) => item.subjectCode === subjectCode);
+        if (index >= 0) {
+          const next = [...prev];
+          next[index] = updated;
+          return next;
         }
-        return item;
-      })
-    );
+        return [updated, ...prev];
+      });
+      return updated;
+    } catch (error) {
+      console.error('Error submitting attendance to MongoDB:', error);
+      throw error;
+    }
   };
 
   // --- Marks Actions ---
-  const updateStudentSubjectMarks = (subjectCode, updatedScores) => {
-    setStudentMarks((prev) =>
-      prev.map((m) => {
-        if (m.subjectCode === subjectCode) {
-          const combined = { ...m, ...updatedScores };
-          const internalTotal = (Number(combined.internal1) || 0) + (Number(combined.internal2) || 0); // 60
-          const assignmentTotal = Number(combined.assignment) || 0; // 20
-          const finalScore = Number(combined.finalExam) || 0; // 100
-          const totalScore = Math.round((internalTotal / 60) * 30 + assignmentTotal + (finalScore / 100) * 50);
-
-          let grade = 'B';
-          let gradePoint = 7;
-          if (totalScore >= 90) { grade = 'A+'; gradePoint = 10; }
-          else if (totalScore >= 80) { grade = 'A'; gradePoint = 9; }
-          else if (totalScore >= 70) { grade = 'B+'; gradePoint = 8; }
-          else if (totalScore >= 60) { grade = 'B'; gradePoint = 7; }
-          else if (totalScore >= 50) { grade = 'C'; gradePoint = 6; }
-          else { grade = 'F'; gradePoint = 0; }
-
-          return { ...combined, totalScore, grade, gradePoint };
+  const updateStudentSubjectMarks = async (subjectCode, updatedScores) => {
+    try {
+      const updated = await api.updateSubjectMarks(subjectCode, updatedScores);
+      setStudentMarks((prev) => {
+        const index = prev.findIndex((m) => m.subjectCode === subjectCode);
+        if (index >= 0) {
+          const next = [...prev];
+          next[index] = updated;
+          return next;
         }
-        return m;
-      })
-    );
+        return [updated, ...prev];
+      });
+      return updated;
+    } catch (error) {
+      console.error('Error updating marks in MongoDB:', error);
+      throw error;
+    }
   };
 
   // --- Hostel Actions ---
-  const applyHostel = (applicationData) => {
-    const newApp = {
+  const applyHostel = async (applicationData) => {
+    const payload = {
       ...applicationData,
       id: `HAPP-${Date.now().toString().slice(-4)}`,
       appliedDate: new Date().toISOString().split('T')[0],
       status: 'Pending'
     };
-    setHostelApplications((prev) => [newApp, ...prev]);
 
-    // Update student status to Applied
-    updateStudent(applicationData.studentId, { hostelStatus: 'Applied' });
-    return newApp;
+    try {
+      const saved = await api.applyHostel(payload);
+      const appToAdd = saved || payload;
+      setHostelApplications((prev) => [appToAdd, ...prev]);
+
+      // Update student status in local state & MongoDB
+      await updateStudent(applicationData.studentId, { hostelStatus: 'Applied' });
+      return appToAdd;
+    } catch (error) {
+      console.error('Error applying for hostel in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const approveHostelApplication = (appId, assignedRoomNo) => {
-    const app = hostelApplications.find((a) => a.id === appId);
-    if (!app) return;
+  const approveHostelApplication = async (appId, assignedRoomNo) => {
+    try {
+      await api.approveHostelApplication(appId, assignedRoomNo);
 
-    // Update application
-    setHostelApplications((prev) =>
-      prev.map((a) => (a.id === appId ? { ...a, status: 'Approved', assignedRoom: assignedRoomNo } : a))
-    );
+      setHostelApplications((prev) =>
+        prev.map((a) => (a.id === appId ? { ...a, status: 'Approved', assignedRoom: assignedRoomNo } : a))
+      );
 
-    // Update Room occupancy
-    setHostelRooms((prev) =>
-      prev.map((room) => {
-        if (room.roomNo === assignedRoomNo) {
-          const newOccupied = room.occupied + 1;
-          return {
-            ...room,
-            occupied: newOccupied,
-            status: newOccupied >= room.capacity ? 'Occupied' : 'Available',
-            residents: [...(room.residents || []), app.studentId]
-          };
-        }
-        return room;
-      })
-    );
+      const app = hostelApplications.find((a) => a.id === appId);
+      if (app) {
+        setHostelRooms((prev) =>
+          prev.map((room) => {
+            if (room.roomNo === assignedRoomNo) {
+              const newOccupied = (room.occupied || 0) + 1;
+              return {
+                ...room,
+                occupied: newOccupied,
+                status: newOccupied >= room.capacity ? 'Occupied' : 'Available',
+                residents: [...(room.residents || []), app.studentId]
+              };
+            }
+            return room;
+          })
+        );
 
-    // Update Student
-    updateStudent(app.studentId, {
-      hostelStatus: 'Allocated',
-      hostelRoom: assignedRoomNo
-    });
+        await updateStudent(app.studentId, {
+          hostelStatus: 'Allocated',
+          hostelRoom: assignedRoomNo
+        });
+      }
+    } catch (error) {
+      console.error('Error approving hostel application in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const rejectHostelApplication = (appId, rejectionReason) => {
-    const app = hostelApplications.find((a) => a.id === appId);
-    if (!app) return;
+  const rejectHostelApplication = async (appId, rejectionReason) => {
+    try {
+      await api.rejectHostelApplication(appId, rejectionReason);
 
-    setHostelApplications((prev) =>
-      prev.map((a) => (a.id === appId ? { ...a, status: 'Rejected', rejectionReason } : a))
-    );
+      setHostelApplications((prev) =>
+        prev.map((a) => (a.id === appId ? { ...a, status: 'Rejected', rejectionReason } : a))
+      );
 
-    updateStudent(app.studentId, { hostelStatus: 'None' });
+      const app = hostelApplications.find((a) => a.id === appId);
+      if (app) {
+        await updateStudent(app.studentId, { hostelStatus: 'None' });
+      }
+    } catch (error) {
+      console.error('Error rejecting hostel application in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const addHostelRoom = (roomData) => {
-    const newRoom = {
+  const addHostelRoom = async (roomData) => {
+    const payload = {
       ...roomData,
       id: `RM-${Date.now().toString().slice(-4)}`,
       occupied: 0,
       status: 'Available',
       residents: []
     };
-    setHostelRooms((prev) => [...prev, newRoom]);
+
+    try {
+      const saved = await api.createHostelRoom(payload);
+      const roomToAdd = saved || payload;
+      setHostelRooms((prev) => [...prev, roomToAdd]);
+      return roomToAdd;
+    } catch (error) {
+      console.error('Error adding hostel room to MongoDB:', error);
+      throw error;
+    }
   };
 
-  const updateHostelRoom = (id, updates) => {
-    setHostelRooms((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
+  const updateHostelRoom = async (id, updates) => {
+    try {
+      const updated = await api.updateHostelRoom(id, updates);
+      setHostelRooms((prev) => prev.map((r) => ((r.id === id || r._id === id) ? { ...r, ...(updated || updates) } : r)));
+      return updated;
+    } catch (error) {
+      console.error('Error updating hostel room in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const deleteHostelRoom = (id) => {
-    setHostelRooms((prev) => prev.filter((r) => r.id !== id));
+  const deleteHostelRoom = async (id) => {
+    try {
+      await api.deleteHostelRoom(id);
+      setHostelRooms((prev) => prev.filter((r) => r.id !== id && r._id !== id));
+    } catch (error) {
+      console.error('Error deleting hostel room from MongoDB:', error);
+      throw error;
+    }
   };
 
-  const addHostelComplaint = (complaintData) => {
-    const newComplaint = {
+  const addHostelComplaint = async (complaintData) => {
+    const payload = {
       ...complaintData,
       id: `CMP-${Date.now().toString().slice(-4)}`,
       submittedDate: new Date().toISOString().split('T')[0],
       status: 'Open'
     };
-    setHostelComplaints((prev) => [newComplaint, ...prev]);
-    return newComplaint;
+
+    try {
+      const saved = await api.createHostelComplaint(payload);
+      const cmpToAdd = saved || payload;
+      setHostelComplaints((prev) => [cmpToAdd, ...prev]);
+      return cmpToAdd;
+    } catch (error) {
+      console.error('Error adding hostel complaint to MongoDB:', error);
+      throw error;
+    }
   };
 
-  const updateHostelComplaintStatus = (id, newStatus) => {
-    setHostelComplaints((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
-    );
+  const updateHostelComplaintStatus = async (id, newStatus) => {
+    try {
+      const updated = await api.updateHostelComplaintStatus(id, newStatus);
+      setHostelComplaints((prev) =>
+        prev.map((c) => ((c.id === id || c._id === id) ? { ...c, status: newStatus, ...(updated || {}) } : c))
+      );
+      return updated;
+    } catch (error) {
+      console.error('Error updating complaint in MongoDB:', error);
+      throw error;
+    }
   };
 
   // --- Transport Actions ---
-  const applyTransport = (applicationData) => {
-    const newApp = {
+  const applyTransport = async (applicationData) => {
+    const payload = {
       ...applicationData,
       id: `TAPP-${Date.now().toString().slice(-4)}`,
       appliedDate: new Date().toISOString().split('T')[0],
       status: 'Pending'
     };
-    setTransportApplications((prev) => [newApp, ...prev]);
 
-    // Update student status to Applied
-    updateStudent(applicationData.studentId, { transportStatus: 'Applied' });
-    return newApp;
+    try {
+      const saved = await api.applyTransport(payload);
+      const appToAdd = saved || payload;
+      setTransportApplications((prev) => [appToAdd, ...prev]);
+
+      await updateStudent(applicationData.studentId, { transportStatus: 'Applied' });
+      return appToAdd;
+    } catch (error) {
+      console.error('Error applying for transport in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const approveTransportApplication = (appId, assignedBusNo, assignedStop) => {
-    const app = transportApplications.find((a) => a.id === appId);
-    if (!app) return;
+  const approveTransportApplication = async (appId, assignedBusNo, assignedStop) => {
+    try {
+      await api.approveTransportApplication(appId, assignedBusNo, assignedStop);
 
-    setTransportApplications((prev) =>
-      prev.map((a) =>
-        a.id === appId
-          ? { ...a, status: 'Approved', assignedBus: assignedBusNo, assignedStop }
-          : a
-      )
-    );
+      setTransportApplications((prev) =>
+        prev.map((a) =>
+          a.id === appId
+            ? { ...a, status: 'Approved', assignedBus: assignedBusNo, assignedStop }
+            : a
+        )
+      );
 
-    // Update bus occupancy
-    setBuses((prev) =>
-      prev.map((bus) => {
-        if (bus.busNo === assignedBusNo) {
-          return { ...bus, occupiedSeats: Math.min(bus.capacity, bus.occupiedSeats + 1) };
-        }
-        return bus;
-      })
-    );
+      const app = transportApplications.find((a) => a.id === appId);
+      if (app) {
+        setBuses((prev) =>
+          prev.map((bus) => {
+            if (bus.busNo === assignedBusNo) {
+              return { ...bus, occupiedSeats: Math.min(bus.capacity, (bus.occupiedSeats || 0) + 1) };
+            }
+            return bus;
+          })
+        );
 
-    // Update student
-    updateStudent(app.studentId, {
-      transportStatus: 'Allocated',
-      transportBus: assignedBusNo
-    });
+        await updateStudent(app.studentId, {
+          transportStatus: 'Allocated',
+          transportBus: assignedBusNo
+        });
+      }
+    } catch (error) {
+      console.error('Error approving transport application in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const rejectTransportApplication = (appId, reason) => {
-    const app = transportApplications.find((a) => a.id === appId);
-    if (!app) return;
+  const rejectTransportApplication = async (appId, reason) => {
+    try {
+      await api.rejectTransportApplication(appId, reason);
 
-    setTransportApplications((prev) =>
-      prev.map((a) => (a.id === appId ? { ...a, status: 'Rejected', rejectionReason: reason } : a))
-    );
+      setTransportApplications((prev) =>
+        prev.map((a) => (a.id === appId ? { ...a, status: 'Rejected', rejectionReason: reason } : a))
+      );
 
-    updateStudent(app.studentId, { transportStatus: 'None' });
+      const app = transportApplications.find((a) => a.id === appId);
+      if (app) {
+        await updateStudent(app.studentId, { transportStatus: 'None' });
+      }
+    } catch (error) {
+      console.error('Error rejecting transport application in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const addBus = (busData) => {
-    const newBus = {
+  const addBus = async (busData) => {
+    const payload = {
       ...busData,
       id: `BUS-${Date.now().toString().slice(-4)}`,
       occupiedSeats: 0,
       fuelStatus: '100%'
     };
-    setBuses((prev) => [...prev, newBus]);
+
+    try {
+      const saved = await api.createBus(payload);
+      const busToAdd = saved || payload;
+      setBuses((prev) => [...prev, busToAdd]);
+      return busToAdd;
+    } catch (error) {
+      console.error('Error adding bus to MongoDB:', error);
+      throw error;
+    }
   };
 
-  const updateBus = (id, updates) => {
-    setBuses((prev) => prev.map((b) => (b.id === id ? { ...b, ...updates } : b)));
+  const updateBus = async (id, updates) => {
+    try {
+      const updated = await api.updateBus(id, updates);
+      setBuses((prev) => prev.map((b) => ((b.id === id || b._id === id) ? { ...b, ...(updated || updates) } : b)));
+      return updated;
+    } catch (error) {
+      console.error('Error updating bus in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const deleteBus = (id) => {
-    setBuses((prev) => prev.filter((b) => b.id !== id));
+  const deleteBus = async (id) => {
+    try {
+      await api.deleteBus(id);
+      setBuses((prev) => prev.filter((b) => b.id !== id && b._id !== id));
+    } catch (error) {
+      console.error('Error deleting bus from MongoDB:', error);
+      throw error;
+    }
   };
 
-  const addRoute = (routeData) => {
-    const newRoute = {
+  const addRoute = async (routeData) => {
+    const payload = {
       ...routeData,
       id: `RT-${Date.now().toString().slice(-4)}`
     };
-    setRoutes((prev) => [...prev, newRoute]);
+
+    try {
+      const saved = await api.createRoute(payload);
+      const routeToAdd = saved || payload;
+      setRoutes((prev) => [...prev, routeToAdd]);
+      return routeToAdd;
+    } catch (error) {
+      console.error('Error adding route to MongoDB:', error);
+      throw error;
+    }
   };
 
-  const updateRoute = (id, updates) => {
-    setRoutes((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
+  const updateRoute = async (id, updates) => {
+    try {
+      const updated = await api.updateRoute(id, updates);
+      setRoutes((prev) => prev.map((r) => ((r.id === id || r._id === id) ? { ...r, ...(updated || updates) } : r)));
+      return updated;
+    } catch (error) {
+      console.error('Error updating route in MongoDB:', error);
+      throw error;
+    }
   };
 
-  const deleteRoute = (id) => {
-    setRoutes((prev) => prev.filter((r) => r.id !== id));
+  const deleteRoute = async (id) => {
+    try {
+      await api.deleteRoute(id);
+      setRoutes((prev) => prev.filter((r) => r.id !== id && r._id !== id));
+    } catch (error) {
+      console.error('Error deleting route from MongoDB:', error);
+      throw error;
+    }
   };
 
   return (
@@ -402,6 +687,9 @@ export const ERPProvider = ({ children }) => {
         buses,
         routes,
         transportApplications,
+        isLoading,
+        isDbConnected,
+        refreshData: fetchAllData,
         resetToMockData,
         // Actions
         addStudent,

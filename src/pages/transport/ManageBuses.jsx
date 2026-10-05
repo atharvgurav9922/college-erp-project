@@ -45,36 +45,48 @@ export const ManageBuses = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveAdd = (e) => {
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
     if (!formData.busNo || !formData.driverName) {
       addToast('Please provide bus number and driver details', 'error');
       return;
     }
-    addBus({
-      ...formData,
-      capacity: Number(formData.capacity) || 45
-    });
-    setIsAddModalOpen(false);
-    addToast(`Bus ${formData.busNo} added to university fleet!`, 'success');
+    try {
+      await addBus({
+        ...formData,
+        capacity: Number(formData.capacity) || 45
+      });
+      setIsAddModalOpen(false);
+      addToast(`Bus ${formData.busNo} added to university fleet!`, 'success');
+    } catch (err) {
+      addToast(`Failed to add bus: ${err.message}`, 'error');
+    }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!selectedBus) return;
-    updateBus(selectedBus.id, {
-      ...formData,
-      capacity: Number(formData.capacity),
-      occupiedSeats: Number(formData.occupiedSeats)
-    });
-    setIsEditModalOpen(false);
-    addToast(`Updated details for ${formData.busNo}`, 'success');
+    try {
+      await updateBus(selectedBus.id || selectedBus._id, {
+        ...formData,
+        capacity: Number(formData.capacity),
+        occupiedSeats: Number(formData.occupiedSeats)
+      });
+      setIsEditModalOpen(false);
+      addToast(`Updated details for ${formData.busNo}`, 'success');
+    } catch (err) {
+      addToast(`Failed to update bus: ${err.message}`, 'error');
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedBus) return;
-    deleteBus(selectedBus.id);
-    addToast(`Bus ${selectedBus.busNo} decommissioned from fleet`, 'info');
+    try {
+      await deleteBus(selectedBus.id || selectedBus._id);
+      addToast(`Bus ${selectedBus.busNo} decommissioned from fleet`, 'info');
+    } catch (err) {
+      addToast(`Failed to delete bus: ${err.message}`, 'error');
+    }
   };
 
   const columns = [

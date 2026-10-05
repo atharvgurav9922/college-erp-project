@@ -54,29 +54,41 @@ export const NoticesManagement = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveAdd = (e) => {
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.content) {
       addToast('Please provide a title and notice content', 'error');
       return;
     }
-    addNotice(formData);
-    setIsAddModalOpen(false);
-    addToast('Notice published successfully across all student and faculty portals!', 'success');
+    try {
+      await addNotice(formData);
+      setIsAddModalOpen(false);
+      addToast('Notice published successfully across all student and faculty portals!', 'success');
+    } catch (err) {
+      addToast(`Failed to publish notice: ${err.message}`, 'error');
+    }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!selectedNotice) return;
-    updateNotice(selectedNotice.id, formData);
-    setIsEditModalOpen(false);
-    addToast('Notice updated successfully', 'success');
+    try {
+      await updateNotice(selectedNotice.id || selectedNotice._id, formData);
+      setIsEditModalOpen(false);
+      addToast('Notice updated successfully', 'success');
+    } catch (err) {
+      addToast(`Failed to update notice: ${err.message}`, 'error');
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedNotice) return;
-    deleteNotice(selectedNotice.id);
-    addToast('Notice archived and removed', 'info');
+    try {
+      await deleteNotice(selectedNotice.id || selectedNotice._id);
+      addToast('Notice archived and removed', 'info');
+    } catch (err) {
+      addToast(`Failed to delete notice: ${err.message}`, 'error');
+    }
   };
 
   return (

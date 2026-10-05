@@ -5,16 +5,19 @@ const models = require('./models');
 // Load generated URI from parts or use raw URI
 let mongoUri = process.env.MONGODB_URI;
 if (mongoUri && mongoUri.includes('${')) {
+  const user = encodeURIComponent(process.env.MONGO_USERNAME || '');
+  const pass = encodeURIComponent(process.env.MONGO_PASSWORD || '');
+  const cluster = process.env.MONGO_CLUSTER || '';
   mongoUri = mongoUri
-    .replace('${MONGO_USERNAME}', process.env.MONGO_USERNAME)
-    .replace('${MONGO_PASSWORD}', process.env.MONGO_PASSWORD)
-    .replace('${MONGO_CLUSTER}', process.env.MONGO_CLUSTER);
+    .replace('${MONGO_USERNAME}', user)
+    .replace('${MONGO_PASSWORD}', pass)
+    .replace('${MONGO_CLUSTER}', cluster);
 }
 
 const seedDatabase = async () => {
   try {
     if (!mongoUri) throw new Error("MONGODB_URI is not defined in .env");
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 10000 });
     console.log('✅ Connected to MongoDB Atlas. Starting seed...');
 
     // Dynamic import to support ES modules in CommonJS script
@@ -22,7 +25,7 @@ const seedDatabase = async () => {
     const mockData = await import(mockDataUrl);
 
     // Clear existing data
-    for (const model of Object.values(models)) {
+    for (const [name, model] of Object.entries(models)) {
       await model.deleteMany({});
     }
     console.log('🧹 Cleared existing database records.');
@@ -41,6 +44,14 @@ const seedDatabase = async () => {
     if (mockData.INITIAL_BUSES) await models.Bus.insertMany(mockData.INITIAL_BUSES);
     if (mockData.INITIAL_ROUTES) await models.Route.insertMany(mockData.INITIAL_ROUTES);
     if (mockData.INITIAL_TRANSPORT_APPLICATIONS) await models.TransportApplication.insertMany(mockData.INITIAL_TRANSPORT_APPLICATIONS);
+
+    if (mockData.INITIAL_TIMETABLE) {
+      const timetableDocs = Object.entries(mockData.INITIAL_TIMETABLE).map(([day, slots]) => ({
+        day,
+        slots
+      }));
+      await models.Timetable.insertMany(timetableDocs);
+    }
 
     console.log('🌱 Database seeded successfully with all mock data!');
     process.exit(0);

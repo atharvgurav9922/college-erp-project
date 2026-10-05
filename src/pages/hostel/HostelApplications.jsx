@@ -33,27 +33,35 @@ export const HostelApplications = () => {
     setIsRejectModalOpen(true);
   };
 
-  const handleConfirmApproval = (e) => {
+  const handleConfirmApproval = async (e) => {
     e.preventDefault();
     if (!selectedApp || !selectedRoomNo) return;
 
-    approveHostelApplication(selectedApp.id, selectedRoomNo);
-    setIsApproveModalOpen(false);
-
     try {
-      confetti({ particleCount: 50, spread: 60 });
-    } catch (e) {}
+      await approveHostelApplication(selectedApp.id || selectedApp._id, selectedRoomNo);
+      setIsApproveModalOpen(false);
 
-    addToast(`Approved application for ${selectedApp.studentName}. Assigned Room ${selectedRoomNo}!`, 'success');
+      try {
+        confetti({ particleCount: 50, spread: 60 });
+      } catch (e) {}
+
+      addToast(`Approved application for ${selectedApp.studentName}. Assigned Room ${selectedRoomNo}!`, 'success');
+    } catch (err) {
+      addToast(`Failed to approve application: ${err.message}`, 'error');
+    }
   };
 
-  const handleConfirmRejection = (e) => {
+  const handleConfirmRejection = async (e) => {
     e.preventDefault();
     if (!selectedApp) return;
 
-    rejectHostelApplication(selectedApp.id, rejectionReason);
-    setIsRejectModalOpen(false);
-    addToast(`Rejected hostel request for ${selectedApp.studentName}`, 'info');
+    try {
+      await rejectHostelApplication(selectedApp.id || selectedApp._id, rejectionReason);
+      setIsRejectModalOpen(false);
+      addToast(`Rejected hostel request for ${selectedApp.studentName}`, 'info');
+    } catch (err) {
+      addToast(`Failed to reject application: ${err.message}`, 'error');
+    }
   };
 
   const columns = [
