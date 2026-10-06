@@ -92,7 +92,7 @@ export const StudentDashboard = () => {
         <StatCard
           title="Current CGPA"
           value={currentUser?.cgpa ? currentUser.cgpa.toFixed(2) : '3.84'}
-          subtitle="Out of 4.0 Scale"
+          subtitle="Out of 10.0 Scale"
           icon={Award}
           trend="Top 5%"
           trendLabel="in Class"
@@ -182,9 +182,8 @@ export const StudentDashboard = () => {
                 </div>
                 <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${
-                      item.percentage >= 85 ? 'bg-emerald-500' : item.percentage >= 75 ? 'bg-indigo-500' : 'bg-rose-500'
-                    }`}
+                    className={`h-full rounded-full ${item.percentage >= 85 ? 'bg-emerald-500' : item.percentage >= 75 ? 'bg-indigo-500' : 'bg-rose-500'
+                      }`}
                     style={{ width: `${item.percentage}%` }}
                   />
                 </div>

@@ -24,28 +24,40 @@ export const LoginPage = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
 
-  const handleStandardLogin = (e) => {
+  const handleStandardLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    setTimeout(() => {
-      const res = login(email, password);
+    try {
+      const res = await login(email, password);
       setIsLoading(false);
 
-      if (res.success) {
+      if (res.success && res.user) {
         addToast(`Welcome back, ${res.user.name}!`, 'success');
         redirectToRole(res.user.role);
       } else {
         addToast(res.message || 'Invalid credentials. Use one-click login below!', 'error');
       }
-    }, 400);
+    } catch (err) {
+      setIsLoading(false);
+      addToast(err.message || 'Login failed. Please try again.', 'error');
+    }
   };
 
-  const handleQuickLogin = (role) => {
-    const user = quickLoginAs(role);
-    if (user) {
-      addToast(`Logged in as ${user.name} (${role.toUpperCase()})`, 'success');
-      redirectToRole(role);
+  const handleQuickLogin = async (role) => {
+    setIsLoading(true);
+    try {
+      const user = await quickLoginAs(role);
+      setIsLoading(false);
+      if (user) {
+        addToast(`Logged in as ${user.name} (${role.toUpperCase()})`, 'success');
+        redirectToRole(role);
+      } else {
+        addToast(`Could not authenticate as ${role}`, 'error');
+      }
+    } catch (err) {
+      setIsLoading(false);
+      addToast(`Login failed: ${err.message}`, 'error');
     }
   };
 

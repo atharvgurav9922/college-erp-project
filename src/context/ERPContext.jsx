@@ -82,55 +82,55 @@ export const ERPProvider = ({ children }) => {
 
       let anySuccess = false;
 
-      if (results[0].status === 'fulfilled' && Array.isArray(results[0].value) && results[0].value.length > 0) {
+      if (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) {
         setStudents(results[0].value);
         anySuccess = true;
       }
-      if (results[1].status === 'fulfilled' && Array.isArray(results[1].value) && results[1].value.length > 0) {
+      if (results[1].status === 'fulfilled' && Array.isArray(results[1].value)) {
         setFaculty(results[1].value);
         anySuccess = true;
       }
-      if (results[2].status === 'fulfilled' && Array.isArray(results[2].value) && results[2].value.length > 0) {
+      if (results[2].status === 'fulfilled' && Array.isArray(results[2].value)) {
         setDepartments(results[2].value);
         anySuccess = true;
       }
-      if (results[3].status === 'fulfilled' && Array.isArray(results[3].value) && results[3].value.length > 0) {
+      if (results[3].status === 'fulfilled' && Array.isArray(results[3].value)) {
         setNotices(results[3].value);
         anySuccess = true;
       }
-      if (results[4].status === 'fulfilled' && Array.isArray(results[4].value) && results[4].value.length > 0) {
+      if (results[4].status === 'fulfilled' && Array.isArray(results[4].value)) {
         setStudentAttendance(results[4].value);
         anySuccess = true;
       }
-      if (results[5].status === 'fulfilled' && Array.isArray(results[5].value) && results[5].value.length > 0) {
+      if (results[5].status === 'fulfilled' && Array.isArray(results[5].value)) {
         setStudentMarks(results[5].value);
         anySuccess = true;
       }
-      if (results[6].status === 'fulfilled' && results[6].value && typeof results[6].value === 'object' && Object.keys(results[6].value).length > 0) {
+      if (results[6].status === 'fulfilled' && results[6].value && typeof results[6].value === 'object') {
         setTimetable(results[6].value);
         anySuccess = true;
       }
-      if (results[7].status === 'fulfilled' && Array.isArray(results[7].value) && results[7].value.length > 0) {
+      if (results[7].status === 'fulfilled' && Array.isArray(results[7].value)) {
         setHostelRooms(results[7].value);
         anySuccess = true;
       }
-      if (results[8].status === 'fulfilled' && Array.isArray(results[8].value) && results[8].value.length > 0) {
+      if (results[8].status === 'fulfilled' && Array.isArray(results[8].value)) {
         setHostelApplications(results[8].value);
         anySuccess = true;
       }
-      if (results[9].status === 'fulfilled' && Array.isArray(results[9].value) && results[9].value.length > 0) {
+      if (results[9].status === 'fulfilled' && Array.isArray(results[9].value)) {
         setHostelComplaints(results[9].value);
         anySuccess = true;
       }
-      if (results[10].status === 'fulfilled' && Array.isArray(results[10].value) && results[10].value.length > 0) {
+      if (results[10].status === 'fulfilled' && Array.isArray(results[10].value)) {
         setBuses(results[10].value);
         anySuccess = true;
       }
-      if (results[11].status === 'fulfilled' && Array.isArray(results[11].value) && results[11].value.length > 0) {
+      if (results[11].status === 'fulfilled' && Array.isArray(results[11].value)) {
         setRoutes(results[11].value);
         anySuccess = true;
       }
-      if (results[12].status === 'fulfilled' && Array.isArray(results[12].value) && results[12].value.length > 0) {
+      if (results[12].status === 'fulfilled' && Array.isArray(results[12].value)) {
         setTransportApplications(results[12].value);
         anySuccess = true;
       }

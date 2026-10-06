@@ -13,8 +13,8 @@ export const Navbar = ({ setIsMobileOpen }) => {
   const navigate = useNavigate();
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
 
-  const handleRoleSwitch = (roleId) => {
-    quickLoginAs(roleId);
+  const handleRoleSwitch = async (roleId) => {
+    await quickLoginAs(roleId);
     setIsRoleDropdownOpen(false);
     addToast(`Switched view to ${roleId.toUpperCase()} portal`, 'info');
     

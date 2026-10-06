@@ -64,23 +64,41 @@ export const EnterMarks = () => {
     return { total, grade, gradePoint };
   };
 
-  const handleSaveMarks = (e) => {
+  // Sync marks from DB/context whenever selected subject or studentMarks changes
+  React.useEffect(() => {
+    const existing = studentMarks.find((m) => m.subjectCode === selectedSubject);
+    if (existing) {
+      setScores((prev) => ({
+        ...prev,
+        'STU-001': {
+          internal1: existing.internal1 ?? 28,
+          internal2: existing.internal2 ?? 27,
+          assignment: existing.assignment ?? 19,
+          finalExam: existing.finalExam ?? 88
+        }
+      }));
+    }
+  }, [selectedSubject, studentMarks]);
+
+  const handleSaveMarks = async (e) => {
     e.preventDefault();
     // Update student marks for selected subject
-    const alexScores = scores['STU-001'];
-    if (alexScores) {
-      updateStudentSubjectMarks(selectedSubject, alexScores);
-    }
-
+    const alexScores = scores['STU-001'] || { internal1: 25, internal2: 25, assignment: 18, finalExam: 80 };
     try {
-      confetti({
-        particleCount: 60,
-        spread: 70,
-        origin: { y: 0.8 }
-      });
-    } catch (e) {}
+      await updateStudentSubjectMarks(selectedSubject, alexScores);
 
-    addToast(`Marks for ${selectedSubject} successfully updated and published to student grade cards!`, 'success');
+      try {
+        confetti({
+          particleCount: 60,
+          spread: 70,
+          origin: { y: 0.8 }
+        });
+      } catch (e) {}
+
+      addToast(`Marks for ${selectedSubject} successfully updated and published to student grade cards!`, 'success');
+    } catch (err) {
+      addToast(`Failed to update marks: ${err.message}`, 'error');
+    }
   };
 
   const filteredStudents = students.filter(

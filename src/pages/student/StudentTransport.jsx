@@ -38,24 +38,28 @@ export const StudentTransport = () => {
   const assignedBusObj = buses.find((b) => b.busNo === assignedBusNo) || buses[3];
   const assignedRouteObj = routes.find((r) => r.name.includes('North Metro')) || routes[0];
 
-  const handleApplyTransport = (e) => {
+  const handleApplyTransport = async (e) => {
     e.preventDefault();
     const routeObj = routes.find((r) => r.id === selectedRouteId);
-    applyTransport({
-      studentId: currentUser?.id || 'STU-001',
-      studentName: currentUser?.name || 'Alex Rivera',
-      rollNumber: currentUser?.rollNumber || '2022-CSE-045',
-      department: currentUser?.department || 'Computer Science & Engineering',
-      preferredRoute: routeObj?.name || 'North Metro Express',
-      preferredStop: selectedStop || routeObj?.stops[0]?.name || 'Central Hub',
-      reason
-    });
-
-    setIsApplyModalOpen(false);
     try {
-      confetti({ particleCount: 50, spread: 60 });
-    } catch (e) {}
-    addToast('Bus pass application submitted to Transport Department!', 'success');
+      await applyTransport({
+        studentId: currentUser?.id || 'STU-001',
+        studentName: currentUser?.name || 'Alex Rivera',
+        rollNumber: currentUser?.rollNumber || '2022-CSE-045',
+        department: currentUser?.department || 'Computer Science & Engineering',
+        preferredRoute: routeObj?.name || 'North Metro Express',
+        preferredStop: selectedStop || routeObj?.stops[0]?.name || 'Central Hub',
+        reason
+      });
+
+      setIsApplyModalOpen(false);
+      try {
+        confetti({ particleCount: 50, spread: 60 });
+      } catch (e) {}
+      addToast('Bus pass application submitted to Transport Department!', 'success');
+    } catch (err) {
+      addToast(`Failed to submit transport application: ${err.message}`, 'error');
+    }
   };
 
   const selectedRouteObjForModal = routes.find((r) => r.id === selectedRouteId) || routes[0];

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { MOCK_USERS } from '../data/mockData';
 
 const AuthContext = createContext(null);
 
@@ -30,26 +31,36 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(user);
       return { success: true, user };
     } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, message: error.message || 'Server connection failed' };
+      console.warn('API login notice, testing fallback:', error.message);
+      const fallbackUser = MOCK_USERS.find(
+        (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
+      );
+      if (fallbackUser) {
+        setCurrentUser(fallbackUser);
+        return { success: true, user: fallbackUser };
+      }
+      return { success: false, message: error.message || 'Invalid email or password' };
     }
   };
 
   const quickLoginAs = async (role) => {
     try {
       const users = await api.getUsers();
-      if (Array.isArray(users)) {
-        const user = users.find(u => u.role === role);
+      if (Array.isArray(users) && users.length > 0) {
+        const user = users.find((u) => u.role === role);
         if (user) {
           setCurrentUser(user);
           return user;
         }
       }
-      return null;
     } catch (error) {
-      console.error('Quick login error:', error);
-      return null;
+      console.warn('API getUsers notice, using local role fallback:', error.message);
     }
+    const fallbackUser = MOCK_USERS.find((u) => u.role === role) || null;
+    if (fallbackUser) {
+      setCurrentUser(fallbackUser);
+    }
+    return fallbackUser;
   };
 
   const logout = () => {

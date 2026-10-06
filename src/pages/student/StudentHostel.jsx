@@ -49,44 +49,52 @@ export const StudentHostel = () => {
   const isAllocated = currentUser?.hostelStatus === 'Allocated' || myApplication?.status === 'Approved';
   const assignedRoomNo = myApplication?.assignedRoom || currentUser?.hostelDetails?.roomNo || 'A-304';
 
-  const handleApplyHostel = (e) => {
+  const handleApplyHostel = async (e) => {
     e.preventDefault();
-    applyHostel({
-      studentId: currentUser?.id || 'STU-001',
-      studentName: currentUser?.name || 'Alex Rivera',
-      rollNumber: currentUser?.rollNumber || '2022-CSE-045',
-      department: currentUser?.department || 'Computer Science & Engineering',
-      gender: 'Male',
-      preferredType: appForm.preferredType,
-      preferredBlock: appForm.preferredBlock,
-      reason: appForm.reason
-    });
-
-    setIsApplyModalOpen(false);
     try {
-      confetti({ particleCount: 50, spread: 60 });
-    } catch (e) {}
-    addToast('Hostel application submitted to Chief Warden for review!', 'success');
+      await applyHostel({
+        studentId: currentUser?.id || 'STU-001',
+        studentName: currentUser?.name || 'Alex Rivera',
+        rollNumber: currentUser?.rollNumber || '2022-CSE-045',
+        department: currentUser?.department || 'Computer Science & Engineering',
+        gender: 'Male',
+        preferredType: appForm.preferredType,
+        preferredBlock: appForm.preferredBlock,
+        reason: appForm.reason
+      });
+
+      setIsApplyModalOpen(false);
+      try {
+        confetti({ particleCount: 50, spread: 60 });
+      } catch (e) {}
+      addToast('Hostel application submitted to Chief Warden for review!', 'success');
+    } catch (err) {
+      addToast(`Failed to submit application: ${err.message}`, 'error');
+    }
   };
 
-  const handleLodgeComplaint = (e) => {
+  const handleLodgeComplaint = async (e) => {
     e.preventDefault();
     if (!complaintForm.title || !complaintForm.description) {
       addToast('Please provide complaint title and description', 'error');
       return;
     }
-    addHostelComplaint({
-      studentName: currentUser?.name || 'Alex Rivera',
-      rollNumber: currentUser?.rollNumber || '2022-CSE-045',
-      roomNo: assignedRoomNo,
-      category: complaintForm.category,
-      title: complaintForm.title,
-      description: complaintForm.description,
-      priority: complaintForm.priority
-    });
-    setIsComplaintModalOpen(false);
-    setComplaintForm({ category: 'Air Conditioning', title: '', description: '', priority: 'Medium' });
-    addToast('Maintenance complaint registered with Hostel Warden office', 'success');
+    try {
+      await addHostelComplaint({
+        studentName: currentUser?.name || 'Alex Rivera',
+        rollNumber: currentUser?.rollNumber || '2022-CSE-045',
+        roomNo: assignedRoomNo,
+        category: complaintForm.category,
+        title: complaintForm.title,
+        description: complaintForm.description,
+        priority: complaintForm.priority
+      });
+      setIsComplaintModalOpen(false);
+      setComplaintForm({ category: 'Air Conditioning', title: '', description: '', priority: 'Medium' });
+      addToast('Maintenance complaint registered with Hostel Warden office', 'success');
+    } catch (err) {
+      addToast(`Failed to register complaint: ${err.message}`, 'error');
+    }
   };
 
   const myComplaints = hostelComplaints.filter(

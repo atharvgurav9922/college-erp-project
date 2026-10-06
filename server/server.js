@@ -46,28 +46,46 @@ app.use((err, req, res, next) => {
 
 // Connect to MongoDB
 const startServer = async () => {
-  try {
-    if (!mongoUri) {
-      throw new Error("MONGODB_URI is not defined in environment variables or .env");
-    }
-    
-    console.log('Connecting to MongoDB Atlas...');
-    await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 10000
-    });
-    console.log('✅ Connected to MongoDB Atlas successfully');
+  const localUri = process.env.LOCAL_MONGODB_URI || 'mongodb://127.0.0.1:27017/college-erp';
+  let connected = false;
 
-    app.listen(PORT, () => {
-      console.log(`🚀 College ERP Backend running on http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
-    console.error('Please verify your MONGODB_URI in server/.env or environment variables.');
-    // Keep app running so health check can report the DB issue
-    app.listen(PORT, () => {
-      console.log(`⚠️ Server running in degraded mode on http://localhost:${PORT} (MongoDB not connected)`);
-    });
+  // 1. Try primary MONGODB_URI (e.g. Atlas)
+  if (mongoUri) {
+    try {
+      console.log('Connecting to primary MongoDB URI...');
+      await mongoose.connect(mongoUri, {
+        serverSelectionTimeoutMS: 3000
+      });
+      console.log('✅ Connected to primary MongoDB successfully');
+      connected = true;
+    } catch (error) {
+      console.warn('⚠️ Primary MongoDB connection failed:', error.message);
+    }
   }
+
+  // 2. If primary failed, attempt local MongoDB fallback
+  if (!connected && localUri) {
+    try {
+      console.log(`Connecting to local MongoDB fallback at ${localUri}...`);
+      await mongoose.connect(localUri, {
+        serverSelectionTimeoutMS: 3000
+      });
+      console.log('✅ Connected to local MongoDB fallback successfully');
+      connected = true;
+    } catch (localError) {
+      console.error('❌ Local MongoDB fallback failed:', localError.message);
+    }
+  }
+
+  if (!connected) {
+    // Disable Mongoose command buffering so queries fail immediately with 500/503 rather than timing out after 10s
+    mongoose.set('bufferCommands', false);
+    console.error('⚠️ Server running in degraded mode on http://localhost:' + PORT + ' (MongoDB not connected)');
+  }
+
+  app.listen(PORT, () => {
+    console.log(`🚀 College ERP Backend running on http://localhost:${PORT} [Database: ${connected ? 'Connected' : 'Disconnected'}]`);
+  });
 };
 
 startServer();

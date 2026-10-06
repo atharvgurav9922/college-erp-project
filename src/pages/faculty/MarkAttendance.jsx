@@ -52,23 +52,27 @@ export const MarkAttendance = () => {
     addToast(`Marked all students as ${status}`, 'info');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    submitAttendanceBatch({
-      subjectCode: selectedSubject,
-      date: selectedDate,
-      attendanceMap
-    });
-
     try {
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.8 }
+      await submitAttendanceBatch({
+        subjectCode: selectedSubject,
+        date: selectedDate,
+        attendanceMap
       });
-    } catch (e) {}
 
-    addToast(`Attendance saved successfully for ${selectedSubject} on ${selectedDate}!`, 'success');
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.8 }
+        });
+      } catch (e) {}
+
+      addToast(`Attendance saved successfully for ${selectedSubject} on ${selectedDate}!`, 'success');
+    } catch (err) {
+      addToast(`Failed to save attendance: ${err.message}`, 'error');
+    }
   };
 
   // Tallies
