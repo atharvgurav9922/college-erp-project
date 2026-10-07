@@ -49,6 +49,10 @@ const createCrudRoutes = (Model, idPrefix = 'REC') => {
       res.status(201).json(savedDoc);
     } catch (error) {
       console.error(`Error creating ${Model.modelName}:`, error);
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern || error.keyValue || {})[0] || 'unique field';
+        return res.status(400).json({ error: `A record with this ${field} already exists.` });
+      }
       res.status(400).json({ error: error.message });
     }
   });
@@ -65,6 +69,10 @@ const createCrudRoutes = (Model, idPrefix = 'REC') => {
       res.json(updatedDoc);
     } catch (error) {
       console.error(`Error updating ${Model.modelName}:`, error);
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern || error.keyValue || {})[0] || 'unique field';
+        return res.status(400).json({ error: `A record with this ${field} already exists.` });
+      }
       res.status(400).json({ error: error.message });
     }
   });

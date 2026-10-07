@@ -169,7 +169,7 @@ export const ERPProvider = ({ children }) => {
   const addStudent = async (studentData) => {
     const payload = {
       ...studentData,
-      id: `STU-${Date.now().toString().slice(-4)}`,
+      id: `STU-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 1000)}`,
       hostelStatus: studentData.hostelStatus || 'None',
       hostelRoom: studentData.hostelRoom || null,
       transportStatus: studentData.transportStatus || 'None',
